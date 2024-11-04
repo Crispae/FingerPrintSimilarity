@@ -12,7 +12,7 @@ from jpype import isJVMStarted, startJVM, getDefaultJVMPath, JPackage
 
 ## Connecting with JAR file
 if not isJVMStarted():
-    cdk_path = os.path.join(os.path.dirname(__file__), "CDK", "cdk-2.9.jar")
+    cdk_path = os.path.join(os.path.dirname(__file__), "cdk", "cdk-2.9.jar")
     startJVM(getDefaultJVMPath(), "-ea", "-Djava.class.path=%s" % cdk_path)
     cdk = JPackage("org").openscience.cdk
 else:
