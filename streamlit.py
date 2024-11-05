@@ -7,7 +7,6 @@ from scipy.spatial.distance import squareform
 import matplotlib.pyplot as plt
 from fingerprints import (
     RDKIT_MACCS,
-    PubChem,
     ECFP6,
     KlekotaRothFingerprint,
     CDK_PUBCHEM,
@@ -16,7 +15,6 @@ from fingerprints import (
 ## Fingerprint classes to use
 fingerprint_classes = {
     "RDKIT_MACCS": RDKIT_MACCS(),
-    "RDKIT_PubChem": PubChem(),
     "ECFP6": ECFP6(),
     "Klekota_and_Roth": KlekotaRothFingerprint(),
     "CDK_PUBCHEM": CDK_PUBCHEM(),
@@ -40,7 +38,7 @@ if uploaded_file:
 
     # Display data
     st.write("Uploaded Data")
-    st.write(df.head())
+    st.write(df)  ## Render whole dataframe
 
     # Dynamically select SMILES and ID columns
     smiles_col = st.sidebar.selectbox("Select SMILES column", df.columns)
@@ -49,7 +47,6 @@ if uploaded_file:
     fp_algorithm = st.sidebar.radio(
         "Select fingerprint algorithm",
         options=[
-            "RDKIT_PubChem",
             "RDKIT_MACCS",
             "ECFP6",
             "Klekota_and_Roth",
@@ -58,9 +55,7 @@ if uploaded_file:
     )
 
     # Similarity threshold slider
-    threshold = st.sidebar.slider(
-        "Select threshold dissimilarity value", 0.0, 1.0, 0.25
-    )
+    threshold = st.sidebar.slider("Select threshold similarity value", 0.0, 1.0, 0.25)
 
     # Select the fingerprint calculation method based on user choice
     fingerprints = []
@@ -114,4 +109,4 @@ if uploaded_file:
     st.dataframe(pd.DataFrame(distance_matrix, columns=df[id_col], index=df[id_col]))
 
     # Threshold line on dendrogram
-    st.write(f"Dissimilarity Threshold: {threshold}")
+    st.write(f"Similarity Threshold: {threshold}")
