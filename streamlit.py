@@ -11,6 +11,7 @@ from fingerprints import (
     KlekotaRothFingerprint,
     CDK_PUBCHEM,
 )
+from utils.visualization import mol_to_image
 
 ## Fingerprint classes to use
 fingerprint_classes = {
@@ -19,7 +20,6 @@ fingerprint_classes = {
     "Klekota_and_Roth": KlekotaRothFingerprint(),
     "CDK_PUBCHEM": CDK_PUBCHEM(),
 }
-
 
 # Set page title
 st.set_page_config(page_title="Tanimoto Similarity")
@@ -36,77 +36,90 @@ if uploaded_file:
     # Load the data
     df = pd.read_csv(uploaded_file)
 
-    # Display data
-    st.write("Uploaded Data")
-    st.write(df)  ## Render whole dataframe
-
     # Dynamically select SMILES and ID columns
     smiles_col = st.sidebar.selectbox("Select SMILES column", df.columns)
     id_col = st.sidebar.selectbox("Select ID column", df.columns)
 
-    fp_algorithm = st.sidebar.radio(
-        "Select fingerprint algorithm",
-        options=[
-            "RDKIT_MACCS",
-            "ECFP6",
-            "Klekota_and_Roth",
-            "CDK_PUBCHEM",
-        ],
-    )
+    # Check if both columns are selected before proceeding
+    if not (smiles_col.lower() == "smiles"):
+        st.error("Please select SMILES column")
 
-    # Similarity threshold slider
-    threshold = st.sidebar.slider("Select threshold similarity value", 0.0, 1.0, 0.25)
+    else:
+        # Display data with chemical structures
+        df["Structure"] = df[smiles_col].apply(mol_to_image)
+        st.write("Uploaded Data with Chemical Structures")
+        st.dataframe(
+            df, column_config={"Structure": st.column_config.ImageColumn(width=100)}
+        )
 
-    # Select the fingerprint calculation method based on user choice
-    fingerprints = []
-    fingerprint_instance = fingerprint_classes.get(fp_algorithm)
+        fp_algorithm = st.sidebar.radio(
+            "Select fingerprint algorithm",
+            options=[
+                "RDKIT_MACCS",
+                "ECFP6",
+                "Klekota_and_Roth",
+                "CDK_PUBCHEM",
+            ],
+        )
 
-    for smiles in df[smiles_col]:
-        try:
-            fingerprint = fingerprint_instance.calculate_fingerprint(smiles)
-            fingerprints.append(fingerprint)
-        except Exception as e:
-            st.error(f"Error calculating fingerprint for {smiles}: {e}")
+        # Similarity threshold slider
+        threshold = st.sidebar.slider(
+            "Select threshold similarity value", 0.0, 1.0, 0.25
+        )
 
-    # Calculate Tanimoto similarity matrix
-    num_mols = len(fingerprints)
-    similarity_matrix = np.zeros((num_mols, num_mols))
+        # Select the fingerprint calculation method based on user choice
+        fingerprints = []
+        fingerprint_instance = fingerprint_classes.get(fp_algorithm)
 
-    for i in range(num_mols):
-        for j in range(num_mols):
-            similarity_matrix[i, j] = DataStructs.TanimotoSimilarity(
-                fingerprints[i], fingerprints[j]
-            )
+        # Calculate fingerprints
+        for smiles in df[smiles_col]:
+            try:
+                fingerprint = fingerprint_instance.calculate_fingerprint(smiles)
+                fingerprints.append(fingerprint)
+            except Exception as e:
+                st.error(f"Error calculating fingerprint for {smiles}: {e}")
 
-    # Convert similarity to distance matrix
-    distance_matrix = 1 - similarity_matrix
+        # Calculate Tanimoto similarity matrix
+        num_mols = len(fingerprints)
+        similarity_matrix = np.zeros((num_mols, num_mols))
 
-    # Create linkage matrix for hierarchical clustering
-    linkage_matrix = linkage(squareform(distance_matrix), method="average")
+        for i in range(num_mols):
+            for j in range(num_mols):
+                similarity_matrix[i, j] = DataStructs.TanimotoSimilarity(
+                    fingerprints[i], fingerprints[j]
+                )
 
-    # Plot dendrogram
-    fig, ax = plt.subplots(figsize=(10, 6))
-    dendrogram(linkage_matrix, labels=df[id_col].tolist(), ax=ax)
+        # Convert similarity to distance matrix
+        distance_matrix = 1 - similarity_matrix
 
-    # Mark the similarity threshold on the dendrogram
-    threshold_value = 1 - threshold  # Convert similarity threshold to dissimilarity
-    ax.hlines(threshold_value, *ax.get_xlim(), colors="red", linestyles="dashed")
-    ax.text(
-        0,
-        threshold_value + 0.02,
-        f"Threshold: {threshold:.2f}",
-        color="red",
-        fontsize=12,
-    )
+        # Create linkage matrix for hierarchical clustering
+        linkage_matrix = linkage(squareform(distance_matrix), method="average")
 
-    plt.title("Hierarchical Clustering of Chemical Compounds")
-    plt.xlabel("Compound ID")
-    plt.ylabel("Dissimilarity Score")
-    st.pyplot(fig)
+        # Plot dendrogram
+        fig, ax = plt.subplots(figsize=(10, 6))
+        dendrogram(linkage_matrix, labels=df[id_col].tolist(), ax=ax)
 
-    # Show distance matrix
-    st.write("Distance Matrix")
-    st.dataframe(pd.DataFrame(distance_matrix, columns=df[id_col], index=df[id_col]))
+        # Mark the similarity threshold on the dendrogram
+        threshold_value = 1 - threshold  # Convert similarity threshold to dissimilarity
+        ax.hlines(threshold_value, *ax.get_xlim(), colors="red", linestyles="dashed")
+        ax.text(
+            0,
+            threshold_value + 0.02,
+            f"Threshold: {threshold:.2f}",
+            color="red",
+            fontsize=12,
+        )
 
-    # Threshold line on dendrogram
-    st.write(f"Similarity Threshold: {threshold}")
+        plt.title("Hierarchical Clustering of Chemical Compounds")
+        plt.xlabel("Compound ID")
+        plt.ylabel("Dissimilarity Score")
+        st.pyplot(fig)
+
+        # Show distance matrix
+        st.write("Distance Matrix")
+        st.dataframe(
+            pd.DataFrame(distance_matrix, columns=df[id_col], index=df[id_col])
+        )
+
+        # Threshold line on dendrogram
+        st.write(f"Similarity Threshold: {threshold}")

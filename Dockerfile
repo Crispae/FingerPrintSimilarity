@@ -18,16 +18,12 @@ ENV PATH="${JAVA_HOME}/bin:${PATH}"
 # Set a working directory
 WORKDIR /app
 
-# Copy requirements directly into the container
-COPY requirements.txt ./
+# Copy the entire project into the container
+COPY . /app/
 
 # Install dependencies
 RUN pip install --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
-
-COPY fingerprints.py /app/
-COPY streamlit.py /app/
-COPY cdk/cdk-2.9.jar /app/cdk/cdk-2.9.jar 
 
 EXPOSE 8501
 
