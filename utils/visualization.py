@@ -1,4 +1,5 @@
 import rdkit
+from rdkit.Chem import Draw  # https://github.com/rdkit/rdkit/issues/2458
 import base64
 from io import BytesIO
 import streamlit as st
@@ -8,7 +9,7 @@ import streamlit as st
 def mol_to_image(smi: str) -> str:
     """Returns molecular image as data URI."""
     mol = rdkit.Chem.MolFromSmiles(smi)
-    pil_image = rdkit.Chem.Draw.MolToImage(mol, size=(200, 200))
+    pil_image = Draw.MolToImage(mol, size=(200, 200))
 
     with BytesIO() as buffer:
         pil_image.save(buffer, "png")
